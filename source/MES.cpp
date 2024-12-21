@@ -193,32 +193,46 @@ uint32_t readInt(char* array, bool msb) {
          : (uint32_t)(array[0] & 0xff) | (uint32_t)(array[1] & 0xff) << 8 | (uint32_t)(array[2] & 0xff) << 16 | (uint32_t)(array[3] << 24);
 }
 
+
+
 bool MES::readMES(std::ifstream& infile, std::wstring const& decoder_path, bool nospecial) {
+  //std::wcout << L"readMES function called." << std::endl;
   MES::Decoder * decoder = MES::getDecoder(decoder_path);
   
   char buffer[4096];
   infile.read(buffer, sizeof(buffer));
   size_t buffer_len = infile.gcount();
+  // std::wcout << L"Buffer first few bytes: ";
+  // for (int i = 0; i < 4; ++i) {
+  //   std::wcout << std::hex << static_cast<int>(static_cast<unsigned char>(buffer[i])) << L" ";
+  // }
+  // std::wcout << std::endl;
   size_t buffer_ofs = 8;
   size_t signature = readInt(buffer, decoder->isMSB);
+  //std::wcout << L"Signature read: 0x" << std::hex << signature << std::endl;
   bool validsig = (signature == 0xcdc3b0b0); // MC00
   
   bool result = validsig;
-  
+  // std::wcout << L"Valid Signature: " << result << std::endl;
+
   if (result) {
     size_t num_messages = readInt(&buffer[4], decoder->isMSB);
+    // std::wcout << L"Number of messages: " << num_messages << std::endl;
     this->messages.resize(num_messages);
     size_t* offsets = new size_t[num_messages];
     result = true;
     for (size_t m = 0; result && m < num_messages; ++m) {
+    // std::wcout << L"Processing message " << m << std::endl;
     if (ensureBuffer(infile, buffer, sizeof(buffer), buffer_ofs, buffer_len, 4)) {
         offsets[m] = readInt(&buffer[buffer_ofs], decoder->isMSB);
         buffer_ofs += 4;
+        // std::wcout << L"Message " << m << L" offset: " << offsets[m] << std::endl; // Debugging output
     } else {
         result = false;
         std::wcerr << L"Failed to read offset for message " << m << std::endl;
     }
     }
+
     size_t data_ofs = num_messages * 4 + 8;
     if (result) {
       for (size_t m = 0; result && m < num_messages; ++m) { // read the messages
@@ -356,6 +370,11 @@ bool MES::readMES(std::ifstream& infile, std::wstring const& decoder_path, bool 
         }
       }
     }
+    // Debug output for all the messages
+    // std::wcout << L"All messages constructed:" << std::endl;
+    // for (size_t i = 0; i < this->messages.size(); ++i) {
+    //     std::wcout << L"Message " << i << L": " << this->messages[i] << std::endl;
+    // }
     delete[] offsets;
   } else { // ERROR: invalid signature
     std::wcerr << L"Invalid signature " << std::endl;
