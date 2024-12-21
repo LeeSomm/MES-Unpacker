@@ -7,6 +7,7 @@
 #include <utility>
 #include <codecvt>
 #include <cwctype>
+#include <cstdint>  // for uint32_t
 
 #ifdef DUPE2
 const bool NSQ_DEDUPE = true;
@@ -187,9 +188,9 @@ std::wstring& makesafe(std::wstring& ws) {
   return ws;
 }
 
-size_t readInt(char* array, bool msb) {
-  return msb ? array[0] << 24 | (array[1] & 0xff) << 16 | (array[2] & 0xff) << 8 | (array[3] & 0xff)
-         : (array[0] & 0xff) | (array[1] & 0xff) << 8 | (array[2] & 0xff) << 16 | array[3] << 24;
+uint32_t readInt(char* array, bool msb) {
+  return msb ? (uint32_t)(array[0] << 24) | (uint32_t)(array[1] & 0xff) << 16 | (uint32_t)(array[2] & 0xff) << 8 | (uint32_t)(array[3] & 0xff)
+         : (uint32_t)(array[0] & 0xff) | (uint32_t)(array[1] & 0xff) << 8 | (uint32_t)(array[2] & 0xff) << 16 | (uint32_t)(array[3] << 24);
 }
 
 bool MES::readMES(std::ifstream& infile, std::wstring const& decoder_path, bool nospecial) {
@@ -210,11 +211,13 @@ bool MES::readMES(std::ifstream& infile, std::wstring const& decoder_path, bool 
     size_t* offsets = new size_t[num_messages];
     result = true;
     for (size_t m = 0; result && m < num_messages; ++m) {
-      if (ensureBuffer(infile, buffer, sizeof(buffer), buffer_ofs, buffer_len, 4)) {
+    if (ensureBuffer(infile, buffer, sizeof(buffer), buffer_ofs, buffer_len, 4)) {
         offsets[m] = readInt(&buffer[buffer_ofs], decoder->isMSB);
         buffer_ofs += 4;
-      } else
+    } else {
         result = false;
+        std::wcerr << L"Failed to read offset for message " << m << std::endl;
+    }
     }
     size_t data_ofs = num_messages * 4 + 8;
     if (result) {
@@ -355,7 +358,7 @@ bool MES::readMES(std::ifstream& infile, std::wstring const& decoder_path, bool 
     }
     delete[] offsets;
   } else { // ERROR: invalid signature
-    
+    std::wcerr << L"Invalid signature " << std::endl;
   }
   
   return result;

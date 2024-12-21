@@ -1,0 +1,13 @@
+# Ignore all .txt and .mes files in the root directory
+/*.txt
+/*.mes
+
+# Don't ignore .txt and .mes files in subdirectories
+!/*/*.txt
+!/*/*.mes
+
+# Ignore executable
+/mes_tool
+
+# Ignore VSCode settings
+/.vscode/settings.json
